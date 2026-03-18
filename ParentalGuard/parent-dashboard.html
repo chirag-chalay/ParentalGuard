@@ -1,0 +1,863 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Guardian — Parental Control Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --sidebar-w:248px;
+  --bg:#f0f2f5;
+  --surface:#ffffff;
+  --surface2:#f7f8fa;
+  --sidebar-bg:#0f1623;
+  --sidebar-hover:rgba(255,255,255,0.06);
+  --accent:#2563eb;
+  --accent-light:#dbeafe;
+  --accent-dim:rgba(37,99,235,0.12);
+  --green:#16a34a;
+  --green-light:#dcfce7;
+  --amber:#d97706;
+  --amber-light:#fef3c7;
+  --red:#dc2626;
+  --red-light:#fee2e2;
+  --border:#e5e7eb;
+  --text:#111827;
+  --muted:#6b7280;
+  --muted2:#9ca3af;
+  --radius:10px;
+  --shadow:0 1px 3px rgba(0,0,0,0.08);
+}
+html,body{height:100%;font-family:'Plus Jakarta Sans',sans-serif;background:var(--bg);color:var(--text);font-size:14px;line-height:1.5}
+.shell{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:var(--sidebar-w);background:var(--sidebar-bg);display:flex;flex-direction:column;flex-shrink:0;overflow-y:auto}
+.content{flex:1;display:flex;flex-direction:column;min-width:0;overflow:hidden}
+.topbar{height:56px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;padding:0 24px;gap:16px;flex-shrink:0}
+.main{flex:1;overflow-y:auto;padding:24px}
+
+/* SIDEBAR */
+.sb-brand{padding:16px 16px 12px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.sb-logo{width:34px;height:34px;background:var(--accent);border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:18px;flex-shrink:0}
+.sb-title{font-size:16px;font-weight:700;color:#fff}
+.sb-version{font-size:10px;color:rgba(255,255,255,0.35);margin-top:1px}
+.sb-device{margin:10px 10px;background:rgba(255,255,255,0.05);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:11px}
+.sb-dname{font-size:13px;font-weight:600;color:#fff}
+.sb-dmodel{font-size:11px;color:rgba(255,255,255,0.38);margin-top:2px}
+.sb-dstats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;margin-top:10px}
+.sb-ds{text-align:center}
+.sb-ds-v{font-size:12px;font-weight:600;color:#fff}
+.sb-ds-l{font-size:10px;color:rgba(255,255,255,0.35);margin-top:1px}
+.sb-live{width:6px;height:6px;border-radius:50%;background:#22c55e;display:inline-block;animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.sb-sec{padding:14px 16px 5px;font-size:10px;font-weight:600;color:rgba(255,255,255,0.3);text-transform:uppercase;letter-spacing:1.2px}
+.sb-item{display:flex;align-items:center;gap:9px;padding:8px 12px;margin:1px 8px;border-radius:8px;cursor:pointer;transition:all .15s;color:rgba(255,255,255,0.55);font-size:13px;font-weight:500;user-select:none}
+.sb-item:hover{background:var(--sidebar-hover);color:rgba(255,255,255,0.85)}
+.sb-item.active{background:var(--accent);color:#fff}
+.sb-item .ico{width:28px;height:28px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0;background:rgba(255,255,255,0.06)}
+.sb-item.active .ico{background:rgba(255,255,255,0.15)}
+.sb-item .bdg{margin-left:auto;background:var(--red);color:#fff;border-radius:10px;font-size:10px;font-weight:700;padding:1px 6px}
+.sb-item.active .bdg{background:rgba(255,255,255,0.25)}
+.sb-foot{margin-top:auto;padding:10px 8px;border-top:1px solid rgba(255,255,255,0.06)}
+
+/* TOPBAR */
+.tb-title{font-size:18px;font-weight:700;letter-spacing:-0.3px}
+.tb-spacer{flex:1}
+.tb-pill{display:flex;align-items:center;gap:5px;background:var(--green-light);border:1px solid rgba(22,163,74,0.2);color:var(--green);padding:4px 12px;border-radius:20px;font-size:12px;font-weight:600}
+.btn{background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:6px 14px;font-size:13px;font-weight:500;cursor:pointer;color:var(--text);font-family:inherit;transition:all .15s}
+.btn:hover{background:var(--border)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff}
+.btn.primary:hover{background:#1d4ed8}
+.btn.danger{background:var(--red);border-color:var(--red);color:#fff}
+.btn.danger:hover{background:#b91c1c}
+
+/* CARDS */
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);overflow:hidden}
+.ch{padding:13px 18px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:12px}
+.ct{font-size:13px;font-weight:700}
+.cb{padding:18px}
+
+/* STATS */
+.sg{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:18px}
+.sg3{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-bottom:18px}
+.sc{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);box-shadow:var(--shadow);padding:16px 18px}
+.sc-ico{width:38px;height:38px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:10px}
+.sc-v{font-size:24px;font-weight:700;letter-spacing:-.5px;line-height:1}
+.sc-l{font-size:12px;color:var(--muted);margin-top:5px}
+.sc-s{font-size:11px;margin-top:5px;font-weight:500}
+
+/* GRIDS */
+.g2{display:grid;grid-template-columns:1fr 370px;gap:16px}
+
+/* MAP */
+.map-info{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--border)}
+.mi{padding:11px 16px;border-right:1px solid var(--border)}
+.mi:last-child{border-right:none}
+.mi-l{font-size:11px;color:var(--muted);margin-bottom:2px}
+.mi-v{font-size:13px;font-weight:600;font-family:'JetBrains Mono',monospace}
+
+/* TABLE */
+.tbl{width:100%;border-collapse:collapse}
+.tbl th{font-size:11px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;padding:9px 14px;border-bottom:1px solid var(--border);text-align:left;background:var(--surface2)}
+.tbl td{padding:10px 14px;border-bottom:1px solid var(--border);font-size:13px;vertical-align:middle}
+.tbl tr:last-child td{border-bottom:none}
+.tbl tr:hover td{background:var(--surface2)}
+.clink{font-family:'JetBrains Mono',monospace;font-size:12px;color:var(--accent);cursor:pointer}
+
+/* CALLS */
+.cr{display:flex;align-items:center;gap:11px;padding:10px 16px;border-bottom:1px solid var(--border);transition:background .12s}
+.cr:hover{background:var(--surface2)}
+.cr:last-child{border-bottom:none}
+.ci{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0}
+.ci-in{background:var(--green-light)}
+.ci-out{background:var(--accent-light)}
+.ci-miss{background:var(--red-light)}
+.cn{font-size:13px;font-weight:600}
+.cnum{font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace;margin-top:1px}
+.tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:10px;font-size:11px;font-weight:600}
+.ti{background:var(--green-light);color:var(--green)}
+.to{background:var(--accent-light);color:var(--accent)}
+.tm{background:var(--red-light);color:var(--red)}
+.cdur{font-size:12px;font-weight:600;font-family:'JetBrains Mono',monospace}
+
+/* APPS */
+.ar{display:flex;align-items:center;gap:11px;padding:10px 16px;border-bottom:1px solid var(--border);transition:background .12s}
+.ar:hover{background:var(--surface2)}
+.ar:last-child{border-bottom:none}
+.ai{width:34px;height:34px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:17px;flex-shrink:0}
+.abt{flex:1;height:5px;background:var(--border);border-radius:3px;overflow:hidden}
+.abf{height:100%;border-radius:3px}
+.ams{font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:500;min-width:40px;text-align:right;color:var(--muted)}
+
+/* SETTINGS */
+.sr{display:flex;align-items:flex-start;justify-content:space-between;gap:16px;padding:15px 0;border-bottom:1px solid var(--border)}
+.sr:last-child{border-bottom:none}
+.sl{font-size:13px;font-weight:600;margin-bottom:3px}
+.sd{font-size:12px;color:var(--muted);line-height:1.5}
+.toggle{position:relative;display:inline-block;width:42px;height:23px;flex-shrink:0}
+.toggle input{opacity:0;width:0;height:0}
+.tsl{position:absolute;inset:0;background:var(--border);border-radius:12px;cursor:pointer;transition:.2s}
+.tsl:before{content:'';position:absolute;left:3px;top:3px;width:17px;height:17px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,0.15)}
+.toggle input:checked+.tsl{background:var(--accent)}
+.toggle input:checked+.tsl:before{transform:translateX(19px)}
+.sel{border:1px solid var(--border);border-radius:7px;padding:7px 10px;font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;cursor:pointer}
+.sel:focus{border-color:var(--accent)}
+.ri{width:160px;accent-color:var(--accent)}
+.rv{font-size:12px;font-family:'JetBrains Mono',monospace;font-weight:600;color:var(--accent);min-width:56px;text-align:right}
+
+/* RETENTION */
+.ret-bar{height:9px;border-radius:5px;background:var(--border);overflow:hidden;margin:10px 0}
+.ret-fill{height:100%;background:var(--accent);border-radius:5px;transition:width .3s}
+.ret-presets{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:14px}
+.rp{padding:10px;border:2px solid var(--border);border-radius:9px;text-align:center;cursor:pointer;transition:all .15s}
+.rp:hover{border-color:var(--accent)}
+.rp.sel-p{border-color:var(--accent);background:var(--accent-dim)}
+.rp-v{font-size:18px;font-weight:700}
+.rp-l{font-size:11px;color:var(--muted)}
+.rp.sel-p .rp-v{color:var(--accent)}
+.rp.sel-p .rp-l{color:var(--accent)}
+
+/* GEOFENCE */
+.gi{display:flex;align-items:center;gap:11px;padding:11px 16px;border-bottom:1px solid var(--border)}
+.gi:last-child{border-bottom:none}
+.g-ico{width:34px;height:34px;border-radius:50%;background:var(--accent-dim);display:flex;align-items:center;justify-content:center;font-size:16px}
+.gst{font-size:11px;font-weight:600;padding:3px 9px;border-radius:8px;margin-left:auto}
+.gin{background:var(--green-light);color:var(--green)}
+.gout{background:var(--red-light);color:var(--red)}
+
+/* ALERT */
+.alert{display:flex;align-items:flex-start;gap:10px;padding:11px 14px;border-radius:8px;font-size:13px;margin-bottom:12px}
+.aw{background:var(--amber-light);border:1px solid rgba(217,119,6,0.2);color:var(--amber)}
+.ai2{background:var(--accent-light);border:1px solid rgba(37,99,235,0.2);color:var(--accent)}
+
+/* MODAL */
+.mb{position:fixed;inset:0;background:rgba(0,0,0,0.45);z-index:200;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s}
+.mb.open{opacity:1;pointer-events:all}
+.md{background:var(--surface);border-radius:14px;width:420px;box-shadow:0 20px 60px rgba(0,0,0,0.2);transform:translateY(8px);transition:transform .2s}
+.mb.open .md{transform:translateY(0)}
+.mh{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between}
+.mt{font-size:15px;font-weight:700}
+.mc{font-size:22px;cursor:pointer;color:var(--muted);background:none;border:none;line-height:1;font-family:inherit}
+.mbd{padding:20px}
+.mf{padding:13px 20px;border-top:1px solid var(--border);display:flex;justify-content:flex-end;gap:10px}
+.inp{width:100%;border:1px solid var(--border);border-radius:8px;padding:9px 12px;font-size:13px;font-family:inherit;color:var(--text);background:var(--surface);outline:none;margin-bottom:12px}
+.inp:focus{border-color:var(--accent)}
+.inpl{font-size:12px;font-weight:600;color:var(--muted);margin-bottom:5px;display:block}
+
+/* PAGES */
+.page{display:none}
+.page.active{display:block}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:5px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+</style>
+</head>
+<body>
+<div class="shell">
+
+<!-- SIDEBAR -->
+<div class="sidebar">
+  <div class="sb-brand">
+    <div class="sb-logo">🛡️</div>
+    <div><div class="sb-title">Guardian</div><div class="sb-version">Parental Control v2.0</div></div>
+  </div>
+
+  <div class="sb-device">
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+      <span style="font-size:18px">📱</span>
+      <div><div class="sb-dname">Daughter's Phone</div><div class="sb-dmodel">Samsung Galaxy A54 · Android 14</div></div>
+    </div>
+    <div class="sb-dstats">
+      <div class="sb-ds"><div class="sb-ds-v" style="color:#facc15">🔋 72%</div><div class="sb-ds-l">Battery</div></div>
+      <div class="sb-ds"><div class="sb-ds-v" style="color:#4ade80">📶 4G</div><div class="sb-ds-l">Network</div></div>
+      <div class="sb-ds"><div class="sb-ds-v"><span class="sb-live"></span> <span style="color:#4ade80;font-size:11px">Live</span></div><div class="sb-ds-l">Status</div></div>
+    </div>
+  </div>
+
+  <div class="sb-sec">Overview</div>
+  <div class="sb-item active" onclick="nav('dashboard',this)"><div class="ico">🏠</div>Dashboard</div>
+
+  <div class="sb-sec">Location</div>
+  <div class="sb-item" onclick="nav('location',this)"><div class="ico">📍</div>Live Location</div>
+  <div class="sb-item" onclick="nav('history',this)"><div class="ico">🗺️</div>Location History</div>
+  <div class="sb-item" onclick="nav('geofence',this)"><div class="ico">🔔</div>Geofence Alerts</div>
+
+  <div class="sb-sec">Activity</div>
+  <div class="sb-item" onclick="nav('calls',this)"><div class="ico">📞</div>Call Logs<span class="bdg">4</span></div>
+  <div class="sb-item" onclick="nav('screentime',this)"><div class="ico">📊</div>Screen Time</div>
+  <div class="sb-item" onclick="nav('apps',this)"><div class="ico">📱</div>Installed Apps</div>
+
+  <div class="sb-sec">Controls</div>
+  <div class="sb-item" onclick="nav('blockapps',this)"><div class="ico">🚫</div>Block Apps</div>
+  <div class="sb-item" onclick="nav('blockweb',this)"><div class="ico">🌐</div>Block Websites</div>
+  <div class="sb-item" onclick="nav('schedule',this)"><div class="ico">🕐</div>Screen Schedule</div>
+
+  <div class="sb-sec">System</div>
+  <div class="sb-item" onclick="nav('settings',this)"><div class="ico">⚙️</div>Settings</div>
+  <div class="sb-item" onclick="nav('alerts',this)"><div class="ico">🚨</div>Alert History<span class="bdg">2</span></div>
+
+  <div class="sb-foot">
+    <div class="sb-item" style="font-size:12px;color:rgba(255,255,255,0.3)"><div class="ico" style="font-size:12px">🔗</div>Firebase: Connected</div>
+  </div>
+</div>
+
+<!-- CONTENT -->
+<div class="content">
+  <div class="topbar">
+    <div class="tb-title" id="tb-title">Dashboard</div>
+    <div class="tb-spacer"></div>
+    <div class="tb-pill"><span class="sb-live"></span>Every 5 min</div>
+    <button class="btn primary" onclick="simulateRefresh()">↻ Refresh Now</button>
+  </div>
+  <div class="main">
+
+<!-- PAGE: DASHBOARD -->
+<div class="page active" id="pg-dashboard">
+  <div class="alert aw"><span style="font-size:16px">⚠️</span><div><strong>4 Missed Calls</strong> — including 2 from unknown numbers today. <a onclick="nav('calls',document.querySelectorAll('.sb-item')[5])" style="cursor:pointer;text-decoration:underline">View Call Logs →</a></div></div>
+  <div class="sg">
+    <div class="sc"><div class="sc-ico" style="background:#dbeafe">📍</div><div class="sc-v" style="color:var(--accent)">3.2 km</div><div class="sc-l">From Home</div><div class="sc-s" style="color:var(--green)">✓ Near School</div></div>
+    <div class="sc"><div class="sc-ico" style="background:#fef3c7">📞</div><div class="sc-v" style="color:var(--amber)">12</div><div class="sc-l">Calls Today</div><div class="sc-s" style="color:var(--red)">4 missed</div></div>
+    <div class="sc"><div class="sc-ico" style="background:#fce7f3">📱</div><div class="sc-v" style="color:#db2777">4h 22m</div><div class="sc-l">Screen Time</div><div class="sc-s" style="color:var(--red)">↑ 38m vs yesterday</div></div>
+    <div class="sc"><div class="sc-ico" style="background:#dcfce7">📍</div><div class="sc-v" style="color:var(--green)">48</div><div class="sc-l">Location Points</div><div class="sc-s" style="color:var(--muted)">Stored today</div></div>
+  </div>
+  <div class="g2">
+    <div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="ch"><span class="ct">Live Location</span><span class="tag ti">● GPS Active</span></div>
+        <div id="dash-map" style="height:280px"></div>
+        <div class="map-info">
+          <div class="mi"><div class="mi-l">Latitude</div><div class="mi-v" id="d-lat">26.9124</div></div>
+          <div class="mi"><div class="mi-l">Longitude</div><div class="mi-v" id="d-lng">75.7873</div></div>
+          <div class="mi"><div class="mi-l">Accuracy</div><div class="mi-v">±12 m</div></div>
+          <div class="mi"><div class="mi-l">Updated</div><div class="mi-v" id="d-time">2:47 PM</div></div>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;flex-direction:column;gap:16px">
+      <div class="card">
+        <div class="ch"><span class="ct">Recent Calls</span><a onclick="nav('calls',null)" style="font-size:12px;color:var(--accent);cursor:pointer">See all →</a></div>
+        <div id="dash-calls"></div>
+      </div>
+      <div class="card">
+        <div class="ch"><span class="ct">Top Apps Today</span></div>
+        <div id="dash-apps"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: LOCATION -->
+<div class="page" id="pg-location">
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><span class="ct">Real-time GPS Location</span><div style="display:flex;gap:8px"><span class="tag ti">● Live</span><button class="btn" onclick="simulateRefresh()">↻ Update Now</button></div></div>
+    <div id="loc-map" style="height:420px"></div>
+    <div class="map-info">
+      <div class="mi"><div class="mi-l">Latitude</div><div class="mi-v" id="l-lat">26.9124</div></div>
+      <div class="mi"><div class="mi-l">Longitude</div><div class="mi-v" id="l-lng">75.7873</div></div>
+      <div class="mi"><div class="mi-l">Accuracy</div><div class="mi-v">±12 m</div></div>
+      <div class="mi"><div class="mi-l">Speed</div><div class="mi-v">0 km/h</div></div>
+    </div>
+  </div>
+  <div class="g2">
+    <div class="card"><div class="ch"><span class="ct">Resolved Address</span></div><div class="cb"><div style="font-size:20px;margin-bottom:8px">📌</div><div style="font-size:15px;font-weight:600;margin-bottom:4px">City Palace Road, Jaipur</div><div style="font-size:13px;color:var(--muted)">Near City Mall, Rajasthan 302001, India</div><a href="#" style="font-size:12px;color:var(--accent);display:inline-block;margin-top:10px">Open in Google Maps →</a></div></div>
+    <div class="card"><div class="ch"><span class="ct">Nearby Geofences</span></div><div class="cb" style="font-size:13px"><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>🏠 Home</span><span style="color:var(--muted)">4.1 km away</span></div><div style="display:flex;justify-content:space-between;margin-bottom:8px"><span>🏫 School</span><span style="color:var(--green);font-weight:600">0.3 km · INSIDE</span></div><div style="display:flex;justify-content:space-between"><span>🏪 City Mall</span><span style="color:var(--muted)">0.1 km away</span></div></div></div>
+  </div>
+</div>
+
+<!-- PAGE: HISTORY -->
+<div class="page" id="pg-history">
+  <div class="alert ai2"><span style="font-size:16px">ℹ️</span><div>Showing <strong>48 location records</strong> from today. Retention is set to <strong>30 days</strong>. <a onclick="nav('settings',document.querySelectorAll('.sb-item')[10])" style="cursor:pointer;text-decoration:underline">Manage in Settings →</a></div></div>
+  <div style="display:flex;gap:10px;align-items:center;margin-bottom:16px;flex-wrap:wrap">
+    <input type="date" class="sel" value="2026-03-18">
+    <select class="sel"><option>All locations</option><option>Home area</option><option>School area</option><option>Unknown places</option></select>
+    <div style="margin-left:auto;display:flex;gap:8px">
+      <button class="btn">⬇ Export CSV</button>
+      <button class="btn danger" onclick="if(confirm('Delete all location history?'))alert('History cleared.')">🗑 Clear History</button>
+    </div>
+  </div>
+  <div class="card" style="margin-bottom:16px"><div class="ch"><span class="ct">Location Trail</span><span style="font-size:12px;color:var(--muted)">48 points plotted</span></div><div id="hist-map" style="height:300px"></div></div>
+  <div class="card"><div class="ch"><span class="ct">Location Log</span><span class="tag to">Today · 48 records</span></div><div style="overflow-x:auto"><table class="tbl" id="hist-table"></table></div></div>
+</div>
+
+<!-- PAGE: GEOFENCE -->
+<div class="page" id="pg-geofence">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:16px"><button class="btn primary" onclick="document.getElementById('geo-modal').classList.add('open')">＋ Add Geofence Zone</button></div>
+  <div class="card" style="margin-bottom:16px"><div class="ch"><span class="ct">Saved Zones (4)</span></div><div id="geo-list"></div></div>
+  <div class="card"><div class="ch"><span class="ct">Today's Geofence Alerts</span></div>
+    <div style="padding:16px;display:flex;flex-direction:column;gap:10px">
+      <div style="display:flex;gap:12px;align-items:center;padding:12px;background:var(--red-light);border-radius:8px;border:1px solid rgba(220,38,38,0.15)"><span style="font-size:20px">🚨</span><div><div style="font-size:13px;font-weight:600;color:var(--red)">Left School Zone</div><div style="font-size:12px;color:var(--muted)">Today at 3:32 PM · exited 200m radius</div></div></div>
+      <div style="display:flex;gap:12px;align-items:center;padding:12px;background:var(--green-light);border-radius:8px;border:1px solid rgba(22,163,74,0.15)"><span style="font-size:20px">✅</span><div><div style="font-size:13px;font-weight:600;color:var(--green)">Arrived at School</div><div style="font-size:12px;color:var(--muted)">Today at 8:02 AM · entered 200m radius</div></div></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: CALLS -->
+<div class="page" id="pg-calls">
+  <div style="display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap">
+    <select class="sel"><option>All Calls</option><option>Incoming</option><option>Outgoing</option><option>Missed</option><option>Unknown Numbers</option></select>
+    <input type="date" class="sel" value="2026-03-18">
+    <button class="btn" style="margin-left:auto">⬇ Export</button>
+  </div>
+  <div class="sg"><div class="sc"><div class="sc-ico" style="background:var(--green-light)">📥</div><div class="sc-v" style="color:var(--green)">6</div><div class="sc-l">Incoming</div></div><div class="sc"><div class="sc-ico" style="background:var(--accent-light)">📤</div><div class="sc-v" style="color:var(--accent)">4</div><div class="sc-l">Outgoing</div></div><div class="sc"><div class="sc-ico" style="background:var(--red-light)">📵</div><div class="sc-v" style="color:var(--red)">4</div><div class="sc-l">Missed</div></div><div class="sc"><div class="sc-ico" style="background:#f3e8ff">⏱️</div><div class="sc-v" style="color:#7c3aed">43m</div><div class="sc-l">Talk Time</div></div></div>
+  <div class="card"><div class="ch"><span class="ct">All Calls · Today</span><span class="tag tm">4 Unknown Numbers</span></div><div id="full-call-list"></div></div>
+</div>
+
+<!-- PAGE: SCREENTIME -->
+<div class="page" id="pg-screentime">
+  <div class="sg3"><div class="sc"><div class="sc-ico" style="background:#fce7f3">⏱️</div><div class="sc-v" style="color:#db2777">4h 22m</div><div class="sc-l">Total Today</div><div class="sc-s" style="color:var(--red)">↑ 38m vs yesterday</div></div><div class="sc"><div class="sc-ico" style="background:var(--amber-light)">📅</div><div class="sc-v" style="color:var(--amber)">5h 10m</div><div class="sc-l">7-Day Average</div></div><div class="sc"><div class="sc-ico" style="background:var(--accent-light)">🏆</div><div class="sc-v" style="color:var(--accent);font-size:16px">Instagram</div><div class="sc-l">Most Used</div><div class="sc-s" style="color:var(--muted)">1h 27m today</div></div></div>
+  <div class="card"><div class="ch"><span class="ct">App Usage Today</span><span style="font-size:12px;color:var(--muted)">Updated 2 min ago</span></div><div id="full-app-list"></div></div>
+</div>
+
+<!-- PAGE: APPS -->
+<div class="page" id="pg-apps">
+  <div class="card"><div class="ch"><span class="ct">Installed Apps (32)</span><input class="inp" placeholder="Search apps..." style="width:200px;margin:0;padding:6px 10px"></div><div id="installed-list"></div></div>
+</div>
+
+<!-- PAGE: BLOCK APPS -->
+<div class="page" id="pg-blockapps">
+  <div class="alert ai2"><span style="font-size:16px">ℹ️</span>Blocked apps show a locked screen on your daughter's phone until unblocked.</div>
+  <div class="card"><div class="ch"><span class="ct">App Controls</span></div><div id="block-app-list"></div></div>
+</div>
+
+<!-- PAGE: BLOCK WEBSITES -->
+<div class="page" id="pg-blockweb">
+  <div style="display:flex;justify-content:flex-end;margin-bottom:16px"><button class="btn primary" onclick="document.getElementById('web-modal').classList.add('open')">＋ Block Website</button></div>
+  <div class="card"><div class="ch"><span class="ct">Blocked Websites</span></div><div id="blocked-web-list"></div></div>
+</div>
+
+<!-- PAGE: SCHEDULE -->
+<div class="page" id="pg-schedule">
+  <div class="card" style="margin-bottom:16px"><div class="ch"><span class="ct">Screen Time Rules</span></div>
+    <div class="cb">
+      <div class="sr" style="padding-top:0"><div><div class="sl">Bedtime Lock</div><div class="sd">Block all apps between set hours every night.</div></div><div style="display:flex;align-items:center;gap:10px"><input type="time" class="sel" value="22:00"><span style="color:var(--muted)">to</span><input type="time" class="sel" value="07:00"><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div></div>
+      <div class="sr"><div><div class="sl">Daily Screen Limit</div><div class="sd">Maximum total screen time per day.</div></div><div style="display:flex;align-items:center;gap:10px"><input type="range" class="ri" min="1" max="10" value="5" id="sc-lim" oninput="document.getElementById('sc-lv').textContent=this.value+'h'"><span id="sc-lv" class="rv">5h</span><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div></div>
+      <div class="sr"><div><div class="sl">Homework Time</div><div class="sd">Block social media & games during study hours.</div></div><div style="display:flex;align-items:center;gap:10px"><input type="time" class="sel" value="16:00"><span style="color:var(--muted)">to</span><input type="time" class="sel" value="18:00"><label class="toggle"><input type="checkbox"><span class="tsl"></span></label></div></div>
+      <div class="sr"><div><div class="sl">Weekend Mode</div><div class="sd">Allow 2 extra hours on weekends.</div></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: SETTINGS -->
+<div class="page" id="pg-settings">
+  <!-- Location History Retention -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><span class="ct">📍 Location History Retention</span></div>
+    <div class="cb">
+      <div class="alert ai2" style="margin-bottom:16px"><span style="font-size:16px">💾</span><div>Currently storing <strong>1,392 location points</strong> (~14 MB). Older records auto-deleted based on retention setting.</div></div>
+      <div class="sr" style="padding-top:0">
+        <div><div class="sl">Retention Period</div><div class="sd">How long to keep GPS history before auto-deleting old records.</div></div>
+        <div style="display:flex;align-items:center;gap:10px"><input type="range" class="ri" min="1" max="90" value="30" id="ret-slider" oninput="updateRet(this.value)" style="width:160px"><span class="rv" id="ret-val">30 days</span></div>
+      </div>
+      <div class="ret-bar"><div class="ret-fill" id="ret-fill" style="width:33%"></div></div>
+      <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--muted);margin-bottom:14px"><span>1 day</span><span>30 days</span><span>90 days</span></div>
+      <div class="ret-presets" id="ret-presets">
+        <div class="rp" onclick="setRet(7)"><div class="rp-v">7</div><div class="rp-l">days</div></div>
+        <div class="rp sel-p" onclick="setRet(30)"><div class="rp-v">30</div><div class="rp-l">days ✓</div></div>
+        <div class="rp" onclick="setRet(60)"><div class="rp-v">60</div><div class="rp-l">days</div></div>
+        <div class="rp" onclick="setRet(90)"><div class="rp-v">90</div><div class="rp-l">days</div></div>
+      </div>
+      <div style="margin-top:14px">
+        <div class="sr" style="padding-top:0"><div><div class="sl">Auto-delete on low storage</div><div class="sd">When Firebase exceeds 80%, delete oldest records first.</div></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+        <div class="sr"><div><div class="sl">Keep starred locations forever</div><div class="sd">Pinned locations are never auto-deleted, regardless of age.</div></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Sync Settings -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><span class="ct">🔄 Sync Settings</span></div>
+    <div class="cb">
+      <div class="sr" style="padding-top:0"><div><div class="sl">Location Update Frequency</div><div class="sd">How often to send GPS to server. Lower = more battery use.</div></div><select class="sel"><option>Every 1 minute</option><option>Every 2 minutes</option><option selected>Every 5 minutes</option><option>Every 10 minutes</option><option>Every 30 minutes</option></select></div>
+      <div class="sr"><div><div class="sl">Call Log Sync</div><div class="sd">Sync call logs automatically every 5 minutes.</div></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+      <div class="sr"><div><div class="sl">Screen Time Sync</div><div class="sd">Sync app usage statistics every 5 minutes.</div></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+      <div class="sr"><div><div class="sl">Wi-Fi Only Mode</div><div class="sd">Save mobile data — only sync when on Wi-Fi.</div></div><label class="toggle"><input type="checkbox"><span class="tsl"></span></label></div>
+    </div>
+  </div>
+
+  <!-- Notifications -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><span class="ct">🔔 Notification Alerts</span></div>
+    <div class="cb">
+      <div class="sr" style="padding-top:0"><div><div class="sl">Geofence Enter/Exit</div><div class="sd">Notify when daughter enters or leaves a saved zone.</div></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+      <div class="sr"><div><div class="sl">Unknown Number Calls</div><div class="sd">Alert when a call happens with an unrecognized number.</div></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+      <div class="sr"><div><div class="sl">Screen Time Limit Reached</div><div class="sd">Notify when daily screen time limit is exceeded.</div></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+      <div class="sr"><div><div class="sl">Low Battery (below 20%)</div><div class="sd">Alert when daughter's phone battery is critically low.</div></div><label class="toggle"><input type="checkbox" checked><span class="tsl"></span></label></div>
+    </div>
+  </div>
+
+  <!-- Firebase -->
+  <div class="card" style="margin-bottom:16px">
+    <div class="ch"><span class="ct">🔗 Firebase Configuration</span></div>
+    <div class="cb"><div class="sr" style="padding-top:0;border:none"><div style="width:100%"><div class="sl" style="margin-bottom:6px">Database URL</div><input class="inp" style="margin:0" value="https://parental-control-rtdb.firebaseio.com"><div style="font-size:12px;color:var(--green);margin-top:6px">✓ Connected · Last sync 2 minutes ago</div></div></div></div>
+  </div>
+
+  <!-- Danger Zone -->
+  <div class="card" style="border-color:var(--red)">
+    <div class="ch" style="background:#fff5f5"><span class="ct" style="color:var(--red)">⚠️ Danger Zone</span></div>
+    <div class="cb">
+      <div class="sr" style="padding-top:0"><div><div class="sl">Clear All Location History</div><div class="sd">Permanently delete all stored GPS points. Cannot be undone.</div></div><button class="btn danger" onclick="if(confirm('Delete ALL history?'))alert('Cleared.')">Delete History</button></div>
+      <div class="sr"><div><div class="sl">Clear Call Logs</div><div class="sd">Remove all synced call records from this dashboard.</div></div><button class="btn danger" onclick="if(confirm('Delete call logs?'))alert('Cleared.')">Delete Logs</button></div>
+      <div class="sr"><div><div class="sl">Uninstall Remote Agent</div><div class="sd">Send a remote command to uninstall the tracking app from the phone.</div></div><button class="btn danger" onclick="if(confirm('Stop all monitoring?'))alert('Uninstall command sent.')">Uninstall App</button></div>
+    </div>
+  </div>
+</div>
+
+<!-- PAGE: ALERTS -->
+<div class="page" id="pg-alerts">
+  <div class="card"><div class="ch"><span class="ct">Alert History</span><span class="tag tm">2 New</span></div><div style="padding:16px;display:flex;flex-direction:column;gap:10px" id="alert-list"></div></div>
+</div>
+
+  </div><!-- /main -->
+</div><!-- /content -->
+</div><!-- /shell -->
+
+<!-- MODALS -->
+<div class="mb" id="geo-modal">
+  <div class="md">
+    <div class="mh"><span class="mt">Add Geofence Zone</span><button class="mc" onclick="document.getElementById('geo-modal').classList.remove('open')">×</button></div>
+    <div class="mbd">
+      <label class="inpl">Zone Name</label><input class="inp" placeholder="e.g. School, Home, Mall">
+      <label class="inpl">Address / Coordinates</label><input class="inp" placeholder="e.g. 26.9124, 75.7873">
+      <label class="inpl">Radius</label>
+      <div style="display:flex;align-items:center;gap:10px"><input type="range" class="ri" min="50" max="2000" value="200" id="geo-r" oninput="document.getElementById('geo-rv').textContent=this.value+'m'" style="flex:1"><span class="rv" id="geo-rv">200m</span></div>
+      <div style="margin-top:12px"><label class="inpl">Alert when</label><div style="display:flex;gap:12px;margin-top:4px"><label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="checkbox" checked> Entry</label><label style="display:flex;align-items:center;gap:5px;font-size:13px"><input type="checkbox" checked> Exit</label></div></div>
+    </div>
+    <div class="mf"><button class="btn" onclick="document.getElementById('geo-modal').classList.remove('open')">Cancel</button><button class="btn primary" onclick="document.getElementById('geo-modal').classList.remove('open');alert('Zone saved!')">Save Zone</button></div>
+  </div>
+</div>
+
+<div class="mb" id="web-modal">
+  <div class="md">
+    <div class="mh"><span class="mt">Block a Website</span><button class="mc" onclick="document.getElementById('web-modal').classList.remove('open')">×</button></div>
+    <div class="mbd">
+      <label class="inpl">Website / Domain</label><input class="inp" placeholder="e.g. tiktok.com">
+      <label class="inpl">Category</label><select class="sel" style="width:100%;margin-bottom:12px"><option>Social Media</option><option>Gaming</option><option>Adult Content</option><option>Violence</option><option>Other</option></select>
+      <label style="display:flex;align-items:center;gap:8px;font-size:13px"><input type="checkbox" checked> Block on mobile data too</label>
+    </div>
+    <div class="mf"><button class="btn" onclick="document.getElementById('web-modal').classList.remove('open')">Cancel</button><button class="btn primary" onclick="document.getElementById('web-modal').classList.remove('open');alert('Website blocked!')">Block</button></div>
+  </div>
+</div>
+
+<script>
+const CALLS=[
+  {name:'Priya Singh',num:'+91 98765 43210',type:'in',dur:'5:23',time:'2:45 PM'},
+  {name:'Unknown',num:'+91 70000 11111',type:'miss',dur:'—',time:'2:30 PM'},
+  {name:'Rohit (School)',num:'+91 99887 76655',type:'out',dur:'3:11',time:'1:58 PM'},
+  {name:'Mom',num:'+91 98001 12345',type:'in',dur:'8:02',time:'1:30 PM'},
+  {name:'Anjali',num:'+91 97654 32109',type:'out',dur:'12:45',time:'12:55 PM'},
+  {name:'Unknown',num:'+91 80000 99999',type:'miss',dur:'—',time:'12:10 PM'},
+  {name:'Dad',num:'+91 98001 54321',type:'in',dur:'4:15',time:'11:50 AM'},
+  {name:'Neha',num:'+91 93345 67890',type:'in',dur:'6:30',time:'11:20 AM'},
+  {name:'Unknown',num:'+91 60000 11111',type:'miss',dur:'—',time:'10:45 AM'},
+  {name:'Sima Aunty',num:'+91 94456 78901',type:'out',dur:'2:08',time:'10:10 AM'},
+  {name:'Mom',num:'+91 98001 12345',type:'in',dur:'1:45',time:'9:30 AM'},
+  {name:'Unknown',num:'+91 55566 77788',type:'miss',dur:'—',time:'8:55 AM'},
+];
+const APPS=[
+  {name:'Instagram',pkg:'com.instagram.android',icon:'📸',mins:87,color:'#e1306c'},
+  {name:'WhatsApp',pkg:'com.whatsapp',icon:'💬',mins:64,color:'#25d366'},
+  {name:'YouTube',pkg:'com.google.youtube',icon:'▶️',mins:53,color:'#ff0000'},
+  {name:'Chrome',pkg:'com.android.chrome',icon:'🌐',mins:38,color:'#4285f4'},
+  {name:'Snapchat',pkg:'com.snapchat.android',icon:'👻',mins:22,color:'#ffcc00'},
+  {name:'Spotify',pkg:'com.spotify.music',icon:'🎵',mins:18,color:'#1db954'},
+  {name:'TikTok',pkg:'com.tiktok',icon:'🎬',mins:12,color:'#fe2c55'},
+  {name:'Google Maps',pkg:'com.google.maps',icon:'🗺️',mins:8,color:'#4285f4'},
+];
+const INSTALLED=[...APPS,
+  {name:'Netflix',pkg:'com.netflix',icon:'🎥',mins:0,color:'#e50914'},
+  {name:'PUBG Mobile',pkg:'com.pubg',icon:'🎮',mins:0,color:'#f1a51b'},
+  {name:'Pinterest',pkg:'com.pinterest',icon:'📌',mins:0,color:'#e60023'},
+  {name:'Telegram',pkg:'org.telegram',icon:'✈️',mins:0,color:'#2ca5e0'},
+];
+const LOCHIST=[
+  {lat:26.9124,lng:75.7873,time:'2:47 PM',place:'City Palace Rd, Jaipur',acc:'±12m'},
+  {lat:26.9180,lng:75.7910,time:'2:20 PM',place:'Maharani College Area',acc:'±18m'},
+  {lat:26.9210,lng:75.8050,time:'1:55 PM',place:'MI Road, Jaipur',acc:'±10m'},
+  {lat:26.9240,lng:75.8267,time:'1:10 PM',place:'Home Area',acc:'±8m'},
+  {lat:26.9124,lng:75.7873,time:'12:30 PM',place:'City Mall Vicinity',acc:'±15m'},
+  {lat:26.9300,lng:75.8100,time:'11:55 AM',place:'Sindhi Camp',acc:'±22m'},
+  {lat:26.9350,lng:75.8200,time:'11:20 AM',place:'Jaipur Railway Station',acc:'±9m'},
+  {lat:26.9240,lng:75.8267,time:'10:45 AM',place:'Home Area',acc:'±6m'},
+  {lat:26.9180,lng:75.7910,time:'10:10 AM',place:'Maharani College',acc:'±12m'},
+  {lat:26.9124,lng:75.7873,time:'9:30 AM',place:'City Palace Rd',acc:'±11m'},
+];
+const GEOZONES=[
+  {name:'Home',icon:'🏠',address:'Vaishali Nagar, Jaipur',radius:'300m',status:'out'},
+  {name:'School',icon:'🏫',address:'Maharani College, Jaipur',radius:'200m',status:'in'},
+  {name:'City Mall',icon:'🏪',address:'City Palace Rd, Jaipur',radius:'150m',status:'out'},
+  {name:"Grandmother's",icon:'👵',address:'Mansarovar, Jaipur',radius:'200m',status:'out'},
+];
+const BLOCKLIST=[
+  {name:'TikTok',icon:'🎬',blocked:true,color:'#fe2c55'},
+  {name:'PUBG Mobile',icon:'🎮',blocked:true,color:'#f1a51b'},
+  {name:'Instagram',icon:'📸',blocked:false,color:'#e1306c'},
+  {name:'YouTube',icon:'▶️',blocked:false,color:'#ff0000'},
+  {name:'Snapchat',icon:'👻',blocked:false,color:'#ffcc00'},
+  {name:'Netflix',icon:'🎥',blocked:false,color:'#e50914'},
+];
+const BLOCKEDSITES=[
+  {url:'tiktok.com',cat:'Social Media',added:'2 days ago'},
+  {url:'pornhub.com',cat:'Adult Content',added:'1 week ago'},
+  {url:'bet365.com',cat:'Gambling',added:'1 week ago'},
+];
+const ALERTS=[
+  {icon:'🚨',color:'var(--red)',t:'Left School Zone',d:'Today at 3:32 PM'},
+  {icon:'📵',color:'var(--red)',t:'Missed Call from Unknown (+91 70000 11111)',d:'Today at 2:30 PM'},
+  {icon:'⚠️',color:'var(--amber)',t:'Screen Time Limit Reached (5h)',d:'Today at 2:15 PM'},
+  {icon:'✅',color:'var(--green)',t:'Arrived at School',d:'Today at 8:02 AM'},
+  {icon:'🔋',color:'var(--amber)',t:'Low Battery Warning (18%)',d:'Yesterday at 9:44 PM'},
+  {icon:'📵',color:'var(--red)',t:'Missed Call from Unknown (+91 80000 99999)',d:'Yesterday at 12:10 PM'},
+];
+
+function rCall(c){
+  const T={in:'ci-in',out:'ci-out',miss:'ci-miss'},I={in:'📥',out:'📤',miss:'📵'},G={in:'ti',out:'to',miss:'tm'},L={in:'Incoming',out:'Outgoing',miss:'Missed'};
+  return`<div class="cr"><div class="ci ${T[c.type]}">${I[c.type]}</div><div style="flex:1;min-width:0"><div class="cn">${c.name}</div><div class="cnum">${c.num}</div></div><div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px"><span class="tag ${G[c.type]}">${L[c.type]}</span><span class="cdur">${c.dur}</span><span style="font-size:11px;color:var(--muted)">${c.time}</span></div></div>`;
+}
+function rApp(a,mx){
+  const p=Math.round(a.mins/mx*100),h=Math.floor(a.mins/60),m=a.mins%60,t=h>0?`${h}h ${m}m`:`${m}m`;
+  return`<div class="ar"><div class="ai" style="background:${a.color}22">${a.icon}</div><div style="flex:1;min-width:0"><div style="font-size:13px;font-weight:600;margin-bottom:5px">${a.name}</div><div class="abt"><div class="abf" style="width:${p}%;background:${a.color}"></div></div></div><div class="ams">${t}</div></div>`;
+}
+
+function populate(){
+  document.getElementById('dash-calls').innerHTML=CALLS.slice(0,5).map(rCall).join('');
+  const mx=APPS[0].mins;
+  document.getElementById('dash-apps').innerHTML=APPS.slice(0,4).map(a=>rApp(a,mx)).join('');
+  document.getElementById('full-call-list').innerHTML=CALLS.map(rCall).join('');
+  document.getElementById('full-app-list').innerHTML=APPS.map(a=>rApp(a,mx)).join('');
+
+  let t=`<thead><tr><th>#</th><th>Time</th><th>Coordinates</th><th>Accuracy</th><th>Place</th><th>Actions</th></tr></thead><tbody>`;
+  LOCHIST.forEach((h,i)=>{t+=`<tr><td style="color:var(--muted)">${i+1}</td><td>${h.time}</td><td><span class="clink" onclick="alert('Open: ${h.lat},${h.lng}')">${h.lat.toFixed(4)}, ${h.lng.toFixed(4)}</span></td><td>${h.acc}</td><td>${h.place}</td><td style="display:flex;gap:6px"><button class="btn" onclick="alert('Map opened')">🗺️</button><button class="btn" onclick="this.textContent='⭐ Starred'">☆ Star</button></td></tr>`;});
+  t+=`</tbody>`;
+  document.getElementById('hist-table').innerHTML=t;
+
+  document.getElementById('geo-list').innerHTML=GEOZONES.map(g=>`<div class="gi"><div class="g-ico">${g.icon}</div><div><div style="font-size:13px;font-weight:600">${g.name}</div><div style="font-size:11px;color:var(--muted)">${g.address} · ${g.radius}</div></div><span class="gst ${g.status==='in'?'gin':'gout'}">${g.status==='in'?'● Inside':'○ Outside'}</span><button class="btn" style="margin-left:10px" onclick="this.closest('.gi').remove()">🗑</button></div>`).join('');
+
+  document.getElementById('block-app-list').innerHTML=BLOCKLIST.map(a=>`<div class="ar"><div class="ai" style="background:${a.color}22">${a.icon}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${a.name}</div></div><label class="toggle"><input type="checkbox" ${a.blocked?'checked':''} onchange="alert(this.checked?'${a.name} blocked':'${a.name} unblocked')"><span class="tsl"></span></label></div>`).join('');
+
+  document.getElementById('blocked-web-list').innerHTML=BLOCKEDSITES.map(s=>`<div class="gi"><div class="g-ico">🌐</div><div><div style="font-size:13px;font-weight:600">${s.url}</div><div style="font-size:11px;color:var(--muted)">${s.cat} · Added ${s.added}</div></div><button class="btn danger" style="margin-left:auto" onclick="if(confirm('Unblock ${s.url}?'))this.closest('.gi').remove()">Remove</button></div>`).join('');
+
+  document.getElementById('installed-list').innerHTML=INSTALLED.map(a=>`<div class="ar"><div class="ai" style="background:${a.color}22">${a.icon}</div><div style="flex:1"><div style="font-size:13px;font-weight:600">${a.name}</div><div style="font-size:11px;color:var(--muted);font-family:'JetBrains Mono',monospace">${a.pkg}</div></div><button class="btn" onclick="alert('${a.name} blocked!')">Block</button></div>`).join('');
+
+  document.getElementById('alert-list').innerHTML=ALERTS.map(a=>`<div style="display:flex;align-items:center;gap:12px;padding:12px;border:1px solid var(--border);border-radius:8px"><span style="font-size:20px">${a.icon}</span><div><div style="font-size:13px;font-weight:600;color:${a.color}">${a.t}</div><div style="font-size:12px;color:var(--muted)">${a.d}</div></div></div>`).join('');
+}
+
+// MAPS
+const MAPS={};let cLat=26.9124,cLng=75.7873;
+
+function waitForLeaflet(cb,tries=0){
+  if(typeof L!=='undefined'){cb();}
+  else if(tries<30){setTimeout(()=>waitForLeaflet(cb,tries+1),100);}
+  else{console.warn('Leaflet failed to load');}
+}
+
+function initMap(id,lat,lng,zoom){
+  if(MAPS[id])return;
+  const el=document.getElementById(id);
+  if(!el)return;
+  waitForLeaflet(()=>{
+    if(MAPS[id])return;
+    try{
+      const m=L.map(id,{zoomControl:true,scrollWheelZoom:false}).setView([lat,lng],zoom);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM'}).addTo(m);
+      const ico=L.divIcon({className:'',html:`<div style="background:#2563eb;width:16px;height:16px;border-radius:50%;border:3px solid #fff;box-shadow:0 0 0 3px rgba(37,99,235,0.3)"></div>`,iconSize:[16,16],iconAnchor:[8,8]});
+      const hico=L.divIcon({className:'',html:`<div style="background:#16a34a;width:13px;height:13px;border-radius:50%;border:3px solid #fff"></div>`,iconSize:[13,13],iconAnchor:[7,7]});
+      const mk=L.marker([lat,lng],{icon:ico}).addTo(m).bindPopup("Daughter's Location");
+      L.marker([26.924,75.8267],{icon:hico}).addTo(m).bindPopup('Home');
+      MAPS[id]={map:m,marker:mk};
+    }catch(e){console.warn('Map init error:',e);}
+  });
+}
+function initHistMap(){
+  if(MAPS['hist-map'])return;
+  waitForLeaflet(()=>{
+    if(MAPS['hist-map'])return;
+    try{
+      const m=L.map('hist-map',{zoomControl:true,scrollWheelZoom:false}).setView([26.92,75.8],13);
+      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png',{attribution:'© OSM'}).addTo(m);
+      const pts=LOCHIST.map(h=>[h.lat,h.lng]);
+      L.polyline(pts,{color:'#2563eb',weight:3,opacity:.6,dashArray:'6,4'}).addTo(m);
+      LOCHIST.forEach((h,i)=>{
+        const ic=L.divIcon({className:'',html:`<div style="background:${i===0?'#2563eb':'#9ca3af'};width:${i===0?14:10}px;height:${i===0?14:10}px;border-radius:50%;border:2px solid #fff"></div>`,iconSize:[14,14],iconAnchor:[7,7]});
+        L.marker([h.lat,h.lng],{icon:ic}).addTo(m).bindPopup(`<b>${h.time}</b><br>${h.place}`);
+      });
+      MAPS['hist-map']={map:m};
+    }catch(e){console.warn('Hist map error:',e);}
+  });
+}
+
+// NAVIGATION
+const PAGE_TITLES={dashboard:'Dashboard',location:'Live Location',history:'Location History',geofence:'Geofence Alerts',calls:'Call Logs',screentime:'Screen Time',apps:'Installed Apps',blockapps:'Block Apps',blockweb:'Block Websites',schedule:'Screen Schedule',settings:'Settings',alerts:'Alert History'};
+function nav(page,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.sb-item').forEach(i=>i.classList.remove('active'));
+  document.getElementById('pg-'+page).classList.add('active');
+  document.getElementById('tb-title').textContent=PAGE_TITLES[page]||page;
+  if(el)el.classList.add('active');
+  setTimeout(()=>{
+    if(page==='dashboard')initMap('dash-map',cLat,cLng,14);
+    if(page==='location')initMap('loc-map',cLat,cLng,15);
+    if(page==='history')initHistMap();
+  },60);
+}
+
+// RETENTION SETTINGS
+function updateRet(v){
+  document.getElementById('ret-val').textContent=v+' days';
+  document.getElementById('ret-fill').style.width=(v/90*100)+'%';
+}
+function setRet(v){
+  document.getElementById('ret-slider').value=v;
+  updateRet(v);
+  document.querySelectorAll('.rp').forEach(p=>{
+    const pv=parseInt(p.querySelector('.rp-v').textContent);
+    const isSel=pv===v;
+    p.classList.toggle('sel-p',isSel);
+    p.querySelector('.rp-l').textContent=isSel?'days ✓':'days';
+  });
+}
+
+// REFRESH SIMULATION
+function simulateRefresh(){
+  cLat+=(Math.random()-.5)*.001;cLng+=(Math.random()-.5)*.001;
+  const t=new Date().toLocaleTimeString('en-IN',{hour:'2-digit',minute:'2-digit'});
+  ['d-lat','l-lat'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=cLat.toFixed(4)});
+  ['d-lng','l-lng'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent=cLng.toFixed(4)});
+  const dt=document.getElementById('d-time');if(dt)dt.textContent=t;
+  Object.values(MAPS).forEach(m=>{if(m.marker)m.marker.setLatLng([cLat,cLng]);if(m.map)m.map.panTo([cLat,cLng])});
+}
+
+populate();
+waitForLeaflet(()=>initMap('dash-map',cLat,cLng,14));
+
+// ============================================================
+// FIREBASE REAL-TIME CONNECTION
+// Reads LIVE data from your Firebase Realtime Database.
+// Replace firebaseConfig below with YOUR project's config.
+// ============================================================
+
+// Your Firebase project configuration (from Firebase Console)
+const firebaseConfig = {
+  apiKey: "AIzaSyDBZ3WGV1e08RpeRviWjvFpMXLXvv21q0I",
+  authDomain: "parentalguard-e27f9.firebaseapp.com",
+  databaseURL: "https://parentalguard-e27f9-default-rtdb.asia-southeast1.firebasedatabase.app",
+  projectId: "parentalguard-e27f9",
+  storageBucket: "parentalguard-e27f9.firebasestorage.app",
+  messagingSenderId: "1098909976296",
+  appId: "1:1098909976296:web:7637611cdc37b76dc3eb5d"
+};
+
+// The device ID must match AppConfig.kt → DEVICE_ID on the phone app
+const DEVICE_ID = "daughters_phone";
+
+// Load Firebase SDK from CDN (allowed domain)
+const fbScript = document.createElement('script');
+fbScript.type = 'module';
+fbScript.textContent = `
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+  import { getDatabase, ref, onValue } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-database.js";
+
+  // Initialize Firebase with your config
+  const app = initializeApp(${JSON.stringify(firebaseConfig)});
+  const db  = getDatabase(app);
+
+  const devicePath = 'devices/${DEVICE_ID}';
+
+  // ----------------------------------------------------------
+  // LISTEN: Current Location (updates live every time phone sends new GPS)
+  // ----------------------------------------------------------
+  onValue(ref(db, devicePath + '/currentLocation'), (snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+
+    const lat = parseFloat(data.latitude);
+    const lng = parseFloat(data.longitude);
+
+    // Update coordinate displays on dashboard
+    document.querySelectorAll('#d-lat,#l-lat').forEach(el => el && (el.textContent = lat.toFixed(4)));
+    document.querySelectorAll('#d-lng,#l-lng').forEach(el => el && (el.textContent = lng.toFixed(4)));
+    const timeEl = document.getElementById('d-time');
+    if (timeEl && data.timestamp) timeEl.textContent = data.timestamp.slice(11,16);
+
+    // Move map marker to new location
+    window._fbLat = lat;
+    window._fbLng = lng;
+    Object.values(window.MAPS || {}).forEach(m => {
+      if (m.marker) m.marker.setLatLng([lat, lng]);
+      if (m.map)    m.map.panTo([lat, lng]);
+    });
+
+    // Update the live status pill text
+    const pill = document.querySelector('.tb-pill');
+    if (pill) pill.innerHTML = '<span class="sb-live"></span> Live · ' + (data.timestamp||'').slice(11,16);
+  });
+
+  // ----------------------------------------------------------
+  // LISTEN: Call Logs (updates every time phone syncs)
+  // ----------------------------------------------------------
+  onValue(ref(db, devicePath + '/callLogs'), (snapshot) => {
+    const data = snapshot.val();
+    if (!data || !data.calls) return;
+
+    const calls = data.calls;
+
+    // Helper to render a single call row
+    function renderCall(c) {
+      const T={Incoming:'ci-in',Outgoing:'ci-out',Missed:'ci-miss',Rejected:'ci-miss'};
+      const I={Incoming:'📥',Outgoing:'📤',Missed:'📵',Rejected:'📵'};
+      const G={Incoming:'ti',Outgoing:'to',Missed:'tm',Rejected:'tm'};
+      const t = c.type || 'Unknown';
+      return '<div class="cr">'
+        + '<div class="ci '+(T[t]||'ci-miss')+'">'+(I[t]||'📵')+'</div>'
+        + '<div style="flex:1;min-width:0">'
+        +   '<div class="cn">'+(c.name||'Unknown')+'</div>'
+        +   '<div class="cnum">'+(c.number||c.num||'')+'</div>'
+        + '</div>'
+        + '<div style="display:flex;flex-direction:column;align-items:flex-end;gap:3px">'
+        +   '<span class="tag '+(G[t]||'tm')+'">'+t+'</span>'
+        +   '<span class="cdur">'+(c.duration||'—')+'</span>'
+        +   '<span style="font-size:11px;color:var(--muted)">'+(c.date||'').slice(11,16)+'</span>'
+        + '</div></div>';
+    }
+
+    // Update dashboard call list (top 5)
+    const dashCalls = document.getElementById('dash-calls');
+    if (dashCalls) dashCalls.innerHTML = calls.slice(0,5).map(renderCall).join('');
+
+    // Update full call log page
+    const fullCalls = document.getElementById('full-call-list');
+    if (fullCalls) fullCalls.innerHTML = calls.map(renderCall).join('');
+
+    // Update call count badge in sidebar
+    const badge = document.querySelector('.sb-item[onclick*="calls"] .bdg');
+    if (badge) badge.textContent = calls.filter(c=>c.type==='Missed').length;
+
+    // Update stats cards on calls page
+    const incoming = calls.filter(c=>c.type==='Incoming').length;
+    const outgoing = calls.filter(c=>c.type==='Outgoing').length;
+    const missed   = calls.filter(c=>c.type==='Missed').length;
+    const totalSecs = calls.reduce((s,c)=> s + (parseInt(c.durationSeconds)||0), 0);
+    const totalMins = Math.floor(totalSecs/60);
+    const statsVals = document.querySelectorAll('#pg-calls .sc-v');
+    if (statsVals[0]) statsVals[0].textContent = incoming;
+    if (statsVals[1]) statsVals[1].textContent = outgoing;
+    if (statsVals[2]) statsVals[2].textContent = missed;
+    if (statsVals[3]) statsVals[3].textContent = totalMins + 'm';
+  });
+
+  // ----------------------------------------------------------
+  // LISTEN: Screen Time (updates every time phone syncs)
+  // ----------------------------------------------------------
+  onValue(ref(db, devicePath + '/screenTime'), (snapshot) => {
+    const data = snapshot.val();
+    if (!data || !data.apps) return;
+
+    const apps = data.apps;
+    const maxMins = apps[0]?.totalMinutes || 1;
+
+    // App colors map (fallback to gray if unknown)
+    const appColors = {
+      'com.instagram.android':'#e1306c','com.whatsapp':'#25d366',
+      'com.google.android.youtube':'#ff0000','com.android.chrome':'#4285f4',
+      'com.snapchat.android':'#ffcc00','com.spotify.music':'#1db954',
+      'com.zhiliaoapp.musically':'#fe2c55','com.google.android.apps.maps':'#4285f4',
+    };
+    const appIcons = {
+      'com.instagram.android':'📸','com.whatsapp':'💬',
+      'com.google.android.youtube':'▶️','com.android.chrome':'🌐',
+      'com.snapchat.android':'👻','com.spotify.music':'🎵',
+      'com.zhiliaoapp.musically':'🎬','com.google.android.apps.maps':'🗺️',
+    };
+
+    function renderApp(a) {
+      const pct   = Math.round((a.totalMinutes / maxMins) * 100);
+      const color = appColors[a.packageName] || '#6b7280';
+      const icon  = appIcons[a.packageName]  || '📱';
+      return '<div class="ar">'
+        + '<div class="ai" style="background:'+color+'22">'+icon+'</div>'
+        + '<div style="flex:1;min-width:0">'
+        +   '<div style="font-size:13px;font-weight:600;margin-bottom:5px">'+(a.appName||a.packageName)+'</div>'
+        +   '<div class="abt"><div class="abf" style="width:'+pct+'%;background:'+color+'"></div></div>'
+        + '</div>'
+        + '<div class="ams">'+(a.formattedTime||a.totalMinutes+'m')+'</div>'
+        + '</div>';
+    }
+
+    // Update top 4 on dashboard
+    const dashApps = document.getElementById('dash-apps');
+    if (dashApps) dashApps.innerHTML = apps.slice(0,4).map(renderApp).join('');
+
+    // Update full screen time page
+    const fullApps = document.getElementById('full-app-list');
+    if (fullApps) fullApps.innerHTML = apps.map(renderApp).join('');
+
+    // Update total screen time stat card
+    const total = data.totalMinutes || apps.reduce((s,a)=>s+(a.totalMinutes||0),0);
+    const h = Math.floor(total/60), m = total%60;
+    const timeStr = h > 0 ? h+'h '+m+'m' : m+'m';
+    const screenVals = document.querySelectorAll('#pg-screentime .sc-v');
+    if (screenVals[0]) screenVals[0].textContent = timeStr;
+  });
+
+  // ----------------------------------------------------------
+  // LISTEN: Device Info (battery, network etc.)
+  // ----------------------------------------------------------
+  onValue(ref(db, devicePath + '/deviceInfo'), (snapshot) => {
+    const data = snapshot.val();
+    if (!data) return;
+    // Update sidebar device model
+    const modelEl = document.querySelector('.sb-dmodel');
+    if (modelEl && data.model) modelEl.textContent = data.model + ' · Android ' + (data.os||'');
+  });
+
+  console.log('✅ Firebase connected — listening for live data from ' + '${DEVICE_ID}');
+`;
+document.head.appendChild(fbScript);
+</script>
+</body>
+</html>

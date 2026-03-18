@@ -1,0 +1,13 @@
+// ============================================================
+// settings.gradle
+// Tells Gradle the name of this project and which sub-modules
+// (called "modules" in Android Studio) to include in the build.
+// ============================================================
+
+// The name shown in Android Studio's project panel
+rootProject.name = "ParentalGuard"
+
+// ":app" means Gradle should look for a folder called "app"
+// at the root of the project and build it as a module.
+// Most Android apps have just this one module.
+include ':app'

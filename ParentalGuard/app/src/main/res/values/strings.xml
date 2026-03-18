@@ -1,0 +1,38 @@
+<!--
+  ============================================================
+  res/values/strings.xml
+  All user-visible text strings are defined here.
+
+  WHY KEEP STRINGS HERE?
+    1. Easy to change text in one place
+    2. Supports multiple languages (create res/values-hi/ for Hindi, etc.)
+    3. Android Studio warns you if a string is hardcoded in code
+
+  The app_name appears in:
+    - The launcher icon label (under the icon on home screen)
+    - The Recent Apps switcher
+    - Settings > Apps list
+  ============================================================
+-->
+<resources>
+    <!-- The name shown under the app icon — kept generic to avoid attention -->
+    <string name="app_name">System Monitor</string>
+
+    <!-- Notification strings -->
+    <string name="notif_location_title">System Service</string>
+    <string name="notif_location_text">Running in background…</string>
+    <string name="notif_sync_title">System Sync</string>
+    <string name="notif_sync_text">Syncing data…</string>
+
+    <!-- Permission dialog strings -->
+    <string name="perm_dialog_title">Permissions Required</string>
+    <string name="perm_dialog_message">Location and Call Log access are required. Please grant all permissions to continue.</string>
+    <string name="usage_dialog_title">Enable Usage Access</string>
+    <string name="usage_dialog_message">To track app screen time, please enable Usage Access for System Monitor in the next screen.</string>
+    <string name="btn_open_settings">Open Settings</string>
+    <string name="btn_skip">Skip</string>
+    <string name="btn_exit">Exit</string>
+
+    <!-- Toast messages -->
+    <string name="toast_monitoring_active">Monitoring active</string>
+</resources>
